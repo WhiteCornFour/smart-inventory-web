@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let authProcessed = false;
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -17,36 +18,36 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const handleAuth = async () => {
-      // 1. Kiểm tra URL xem có chứa 'code' không
+      // Nếu đã xử lý rồi thì bỏ qua
+      if (authProcessed) return;
+
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
       if (code) {
-        // QUAN TRỌNG: Đổi mã 'code' lấy Session để tránh lỗi "Auth session missing"
+        authProcessed = true; // Đánh dấu đã bắt đầu xử lý
         const { error } = await supabase.auth.exchangeCodeForSession(code);
+
         if (!error) {
           setIsRecoveryMode(true);
         } else {
-          setMessage({
-            type: "error",
-            text: "Invalid or expired recovery link.",
-          });
+          // Nếu lỗi 400 nhưng thực tế đã có session thì vẫn cho qua
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session) {
+            setIsRecoveryMode(true);
+          } else {
+            setMessage({
+              type: "error",
+              text: "Link expired. Please request a new one.",
+            });
+          }
         }
       }
     };
 
     handleAuth();
-
-    // 2. Lắng nghe sự kiện Auth làm phương án dự phòng
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecoveryMode(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
