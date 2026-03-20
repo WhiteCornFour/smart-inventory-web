@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 // Khởi tạo Supabase Client
-// Đảm bảo bạn đã khai báo 2 biến này trong file .env.local
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -17,13 +16,28 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
 
   useEffect(() => {
-    // 1. Kiểm tra nếu trên URL có chứa tham số 'code' thì cho hiện Form luôn
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("code")) {
-      setIsRecoveryMode(true);
-    }
+    const handleAuth = async () => {
+      // 1. Kiểm tra URL xem có chứa 'code' không
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
 
-    // 2. Vẫn giữ lắng nghe sự kiện từ Supabase làm backup
+      if (code) {
+        // QUAN TRỌNG: Đổi mã 'code' lấy Session để tránh lỗi "Auth session missing"
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          setIsRecoveryMode(true);
+        } else {
+          setMessage({
+            type: "error",
+            text: "Invalid or expired recovery link.",
+          });
+        }
+      }
+    };
+
+    handleAuth();
+
+    // 2. Lắng nghe sự kiện Auth làm phương án dự phòng
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event) => {
@@ -38,7 +52,7 @@ export default function ResetPasswordPage() {
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Kiểm tra đầu vào
+    // Kiểm tra tính hợp lệ của dữ liệu nhập
     if (!password || !confirmPassword) {
       setMessage({ type: "error", text: "Please fill in all fields." });
       return;
@@ -61,7 +75,7 @@ export default function ResetPasswordPage() {
     setMessage({ type: "", text: "" });
 
     try {
-      // 2. Gọi hàm cập nhật mật khẩu của Supabase
+      // Cập nhật mật khẩu mới cho người dùng hiện tại trong Session
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
@@ -69,7 +83,7 @@ export default function ResetPasswordPage() {
       } else {
         setMessage({
           type: "success",
-          text: "Password updated successfully! You can now close this tab and log in from the app.",
+          text: "Password updated successfully! You can now log in from the app.",
         });
         setPassword("");
         setConfirmPassword("");
@@ -81,8 +95,8 @@ export default function ResetPasswordPage() {
     }
   };
 
-  // Trạng thái chờ xác thực link từ Email
-  if (!isRecoveryMode) {
+  // Giao diện khi chưa xác thực xong link
+  if (!isRecoveryMode && !message.text) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -108,7 +122,6 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        {/* Thông báo lỗi hoặc thành công */}
         {message.text && (
           <div
             className={`p-4 rounded-lg mb-6 text-sm font-medium ${
@@ -121,41 +134,43 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form onSubmit={handleUpdatePassword} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              New Password
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+        {isRecoveryMode && (
+          <form onSubmit={handleUpdatePassword} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                New Password
+              </label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Confirm New Password
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-black"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 active:scale-[0.98] transition-all disabled:bg-gray-400 disabled:scale-100 mt-4 shadow-lg shadow-blue-200"
-          >
-            {loading ? "Updating Password..." : "Update Password"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 active:scale-[0.98] transition-all disabled:bg-gray-400 mt-4 shadow-lg shadow-blue-200"
+            >
+              {loading ? "Updating Password..." : "Update Password"}
+            </button>
+          </form>
+        )}
 
         <p className="text-center text-gray-400 text-xs mt-8">
           &copy; 2026 Smart Inventory System. All rights reserved.
