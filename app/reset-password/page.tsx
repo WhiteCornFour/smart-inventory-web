@@ -17,8 +17,13 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
 
   useEffect(() => {
-    // Lắng nghe sự kiện Auth từ Supabase
-    // Khi người dùng click link từ email, event sẽ là 'PASSWORD_RECOVERY'
+    // 1. Kiểm tra nếu trên URL có chứa tham số 'code' thì cho hiện Form luôn
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("code")) {
+      setIsRecoveryMode(true);
+    }
+
+    // 2. Vẫn giữ lắng nghe sự kiện từ Supabase làm backup
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event) => {
