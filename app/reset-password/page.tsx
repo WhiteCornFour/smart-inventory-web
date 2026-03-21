@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-// Khởi tạo Supabase Client
+// Khởi tạo Supabase Client từ biến môi trường
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-let authProcessed = false;
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -16,31 +15,45 @@ export default function ResetPasswordPage() {
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  // Sử dụng useRef để đảm bảo hàm xác thực chỉ chạy duy nhất 1 lần (tránh lỗi 400 PKCE)
+  const hasProcessed = useRef(false);
+
   useEffect(() => {
     const handleAuth = async () => {
-      // Nếu đã xử lý rồi thì bỏ qua
-      if (authProcessed) return;
+      if (hasProcessed.current) return;
 
+      // 1. Kiểm tra xem trình duyệt đã có Session sẵn chưa
+      const {
+        data: { session: existingSession },
+      } = await supabase.auth.getSession();
+      if (existingSession) {
+        setIsRecoveryMode(true);
+        hasProcessed.current = true;
+        return;
+      }
+
+      // 2. Lấy mã 'code' từ URL
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
       if (code) {
-        authProcessed = true; // Đánh dấu đã bắt đầu xử lý
+        hasProcessed.current = true;
+        // Đổi mã code lấy Session chính thức
         const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (!error) {
           setIsRecoveryMode(true);
         } else {
-          // Nếu lỗi 400 nhưng thực tế đã có session thì vẫn cho qua
+          // Kiểm tra lại lần cuối nếu lỗi do chạy song song
           const {
-            data: { session },
+            data: { session: finalCheck },
           } = await supabase.auth.getSession();
-          if (session) {
+          if (finalCheck) {
             setIsRecoveryMode(true);
           } else {
             setMessage({
               type: "error",
-              text: "Link expired. Please request a new one.",
+              text: "Link expired or invalid. Please request a new link from the app.",
             });
           }
         }
@@ -48,6 +61,17 @@ export default function ResetPasswordPage() {
     };
 
     handleAuth();
+
+    // Lắng nghe sự kiện PASSWORD_RECOVERY làm phương án dự phòng
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecoveryMode(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -76,7 +100,7 @@ export default function ResetPasswordPage() {
     setMessage({ type: "", text: "" });
 
     try {
-      // Cập nhật mật khẩu mới cho người dùng hiện tại trong Session
+      // Cập nhật mật khẩu mới thông qua Session đã xác thực
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
@@ -88,6 +112,11 @@ export default function ResetPasswordPage() {
         });
         setPassword("");
         setConfirmPassword("");
+
+        // Tùy chọn: Tự động mở lại App sau 3 giây
+        setTimeout(() => {
+          window.location.href = "io.supabase.flutter://login-callback";
+        }, 3000);
       }
     } catch (err) {
       setMessage({ type: "error", text: "An unexpected error occurred." });
@@ -96,7 +125,7 @@ export default function ResetPasswordPage() {
     }
   };
 
-  // Giao diện khi chưa xác thực xong link
+  // Giao diện khi đang chờ xác thực hoặc lỗi link
   if (!isRecoveryMode && !message.text) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -115,7 +144,7 @@ export default function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             Reset Password
           </h1>
           <p className="text-gray-500 mt-2">
@@ -144,7 +173,7 @@ export default function ResetPasswordPage() {
               <input
                 type="password"
                 placeholder="••••••••"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black transition"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -157,7 +186,7 @@ export default function ResetPasswordPage() {
               <input
                 type="password"
                 placeholder="••••••••"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black transition"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
@@ -166,7 +195,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 active:scale-[0.98] transition-all disabled:bg-gray-400 mt-4 shadow-lg shadow-blue-200"
+              className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold hover:bg-blue-700 active:scale-[0.98] transition-all disabled:bg-gray-400 mt-4 shadow-lg shadow-blue-100"
             >
               {loading ? "Updating Password..." : "Update Password"}
             </button>
