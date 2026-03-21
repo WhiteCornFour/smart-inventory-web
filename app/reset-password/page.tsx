@@ -16,62 +16,84 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
 
   // Sử dụng useRef để đảm bảo hàm xác thực chỉ chạy duy nhất 1 lần (tránh lỗi 400 PKCE)
-  const hasProcessed = useRef(false);
+  //const hasProcessed = useRef(false);
+
+  // useEffect(() => {
+  //   const handleAuth = async () => {
+  //     if (hasProcessed.current) return;
+
+  //     // 1. Kiểm tra xem trình duyệt đã có Session sẵn chưa
+  //     const {
+  //       data: { session: existingSession },
+  //     } = await supabase.auth.getSession();
+  //     if (existingSession) {
+  //       setIsRecoveryMode(true);
+  //       hasProcessed.current = true;
+  //       return;
+  //     }
+
+  //     // 2. Lấy mã 'code' từ URL
+  //     const params = new URLSearchParams(window.location.search);
+  //     const code = params.get("code");
+
+  //     if (code) {
+  //       hasProcessed.current = true;
+  //       // Đổi mã code lấy Session chính thức
+  //       const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  //       if (!error) {
+  //         setIsRecoveryMode(true);
+  //       } else {
+  //         // Kiểm tra lại lần cuối nếu lỗi do chạy song song
+  //         const {
+  //           data: { session: finalCheck },
+  //         } = await supabase.auth.getSession();
+  //         if (finalCheck) {
+  //           setIsRecoveryMode(true);
+  //         } else {
+  //           setMessage({
+  //             type: "error",
+  //             text: "Link expired or invalid. Please request a new link from the app.",
+  //           });
+  //         }
+  //       }
+  //     }
+  //   };
+
+  //   handleAuth();
+
+  //   // Lắng nghe sự kiện PASSWORD_RECOVERY làm phương án dự phòng
+  //   const {
+  //     data: { subscription },
+  //   } = supabase.auth.onAuthStateChange(async (event) => {
+  //     if (event === "PASSWORD_RECOVERY") {
+  //       setIsRecoveryMode(true);
+  //     }
+  //   });
+
+  //   return () => subscription.unsubscribe();
+  // }, []);
 
   useEffect(() => {
     const handleAuth = async () => {
-      if (hasProcessed.current) return;
-
-      // 1. Kiểm tra xem trình duyệt đã có Session sẵn chưa
-      const {
-        data: { session: existingSession },
-      } = await supabase.auth.getSession();
-      if (existingSession) {
-        setIsRecoveryMode(true);
-        hasProcessed.current = true;
-        return;
-      }
-
-      // 2. Lấy mã 'code' từ URL
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
       if (code) {
-        hasProcessed.current = true;
-        // Đổi mã code lấy Session chính thức
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        // Ép hiện Form ngay để người dùng nhập mật khẩu
+        setIsRecoveryMode(true);
 
-        if (!error) {
-          setIsRecoveryMode(true);
-        } else {
-          // Kiểm tra lại lần cuối nếu lỗi do chạy song song
-          const {
-            data: { session: finalCheck },
-          } = await supabase.auth.getSession();
-          if (finalCheck) {
-            setIsRecoveryMode(true);
-          } else {
-            setMessage({
-              type: "error",
-              text: "Link expired or invalid. Please request a new link from the app.",
-            });
-          }
+        // Thử xác thực ngầm
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          console.log(
+            "Xác thực ngầm thất bại, nhưng vẫn giữ Form để thử updateUser",
+          );
         }
       }
     };
 
     handleAuth();
-
-    // Lắng nghe sự kiện PASSWORD_RECOVERY làm phương án dự phòng
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecoveryMode(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
