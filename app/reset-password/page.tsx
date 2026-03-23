@@ -9,28 +9,28 @@ const supabase = createClient(
 );
 
 export default function ResetPasswordPage() {
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [sessionReady, setSessionReady] = useState<boolean>(false);
-  const [message, setMessage] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const handleRecovery = async () => {
-      const hash = window.location.hash;
-      const params = new URLSearchParams(hash.substring(1));
+      const params = new URLSearchParams(window.location.search);
 
-      const access_token = params.get("access_token");
-      const refresh_token = params.get("refresh_token");
+      const token = params.get("token");
+      const type = params.get("type");
 
-      if (!access_token || !refresh_token) {
+      if (!token || type !== "recovery") {
         setMessage("Recovery link invalid or expired");
         return;
       }
 
-      const { error } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
+      // Verify recovery token → create session
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: token,
+        type: "recovery",
       });
 
       if (error) {
@@ -76,40 +76,30 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-[400px] border p-6 rounded">
-        <h1 className="text-xl mb-4">Reset Password</h1>
+    <div>
+      <h1>Reset Password</h1>
 
-        {message && <p className="mb-3">{message}</p>}
+      {message && <p>{message}</p>}
 
-        {sessionReady && (
-          <form onSubmit={updatePassword}>
-            <input
-              type="password"
-              placeholder="New password"
-              className="border w-full p-2 mb-3 text-black"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+      {sessionReady && (
+        <form onSubmit={updatePassword}>
+          <input
+            type="password"
+            placeholder="New password"
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-            <input
-              type="password"
-              placeholder="Confirm password"
-              className="border w-full p-2 mb-3 text-black"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
+          <input
+            type="password"
+            placeholder="Confirm password"
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
 
-            <button
-              type="submit"
-              className="bg-blue-600 text-white w-full p-2"
-              disabled={loading}
-            >
-              {loading ? "Updating..." : "Update Password"}
-            </button>
-          </form>
-        )}
-      </div>
+          <button type="submit">
+            {loading ? "Updating..." : "Update Password"}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
