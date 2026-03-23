@@ -3,118 +3,107 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 export default function ResetPasswordPage() {
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [sessionReady, setSessionReady] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const handleRecovery = async () => {
-      // Supabase tự đọc access_token từ URL
-      const { data, error } = await supabase.auth.getSession();
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.substring(1));
 
-      if (data.session) {
-        setIsRecoveryMode(true);
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
+
+      if (!access_token || !refresh_token) {
+        setMessage("Recovery link invalid or expired");
+        return;
+      }
+
+      const { error } = await supabase.auth.setSession({
+        access_token,
+        refresh_token,
+      });
+
+      if (error) {
+        setMessage(error.message);
       } else {
-        setMessage({
-          type: "error",
-          text: "Recovery link invalid or expired",
-        });
-        console.log("Chi tiết lỗi: ", error);
+        setSessionReady(true);
       }
     };
 
     handleRecovery();
   }, []);
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
+  const updatePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!password || !confirmPassword) {
-      setMessage({ type: "error", text: "Please fill in all fields." });
-      return;
-    }
-
     if (password !== confirmPassword) {
-      setMessage({ type: "error", text: "Passwords do not match!" });
-      return;
-    }
-
-    if (password.length < 6) {
-      setMessage({
-        type: "error",
-        text: "Password must be at least 6 characters.",
-      });
+      setMessage("Passwords do not match");
       return;
     }
 
     setLoading(true);
-    setMessage({ type: "", text: "" });
 
     const { error } = await supabase.auth.updateUser({
       password: password,
     });
 
     if (error) {
-      setMessage({ type: "error", text: error.message });
+      setMessage(error.message);
     } else {
-      setMessage({
-        type: "success",
-        text: "Password updated successfully!",
-      });
+      setMessage("Password updated successfully");
 
       setTimeout(() => {
         window.location.href =
           "https://smart-inventory-web-fawn.vercel.app/login";
-      }, 3000);
+      }, 2000);
     }
 
     setLoading(false);
   };
 
-  if (!isRecoveryMode && !message.text) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Verifying recovery link...</p>
-      </div>
-    );
+  if (!sessionReady && !message) {
+    return <div>Verifying recovery link...</div>;
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl">
-        <h1 className="text-2xl font-bold mb-4 text-black">Reset Password</h1>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-[400px] border p-6 rounded">
+        <h1 className="text-xl mb-4">Reset Password</h1>
 
-        {message.text && <div className="mb-4 text-sm">{message.text}</div>}
+        {message && <p className="mb-3">{message}</p>}
 
-        {isRecoveryMode && (
-          <form onSubmit={handleUpdatePassword}>
+        {sessionReady && (
+          <form onSubmit={updatePassword}>
             <input
               type="password"
-              placeholder="New Password"
-              className="w-full border p-3 mb-3 text-black"
+              placeholder="New password"
+              className="border w-full p-2 mb-3 text-black"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
 
             <input
               type="password"
-              placeholder="Confirm Password"
-              className="w-full border p-3 mb-3 text-black"
+              placeholder="Confirm password"
+              className="border w-full p-2 mb-3 text-black"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
 
             <button
               type="submit"
+              className="bg-blue-600 text-white w-full p-2"
               disabled={loading}
-              className="w-full bg-blue-600 text-white p-3"
             >
               {loading ? "Updating..." : "Update Password"}
             </button>
