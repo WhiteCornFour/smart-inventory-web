@@ -17,48 +17,38 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const handleAuth = async () => {
-      // 1. Kiểm tra session có sẵn chưa
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      console.log("SESSION:", session);
-
-      if (session) {
-        setIsRecoveryMode(true);
-        return;
-      }
-
-      // 2. Lấy code từ URL
+      // Lấy code từ URL
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
 
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        // Exchange code -> session
+        const { data, error } =
+          await supabase.auth.exchangeCodeForSession(code);
 
-        if (!error) {
-          setIsRecoveryMode(true);
-        } else {
+        if (error) {
+          console.log("Exchange error:", error.message);
           setMessage({
             type: "error",
-            text: "Recovery link expired or invalid.",
+            text: "Recovery link expired or invalid",
           });
+          return;
+        }
+
+        // Kiểm tra session sau khi exchange
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        console.log("SESSION AFTER EXCHANGE:", session);
+
+        if (session) {
+          setIsRecoveryMode(true);
         }
       }
     };
 
     handleAuth();
-
-    // 3. Lắng nghe PASSWORD_RECOVERY event (rất quan trọng)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecoveryMode(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
