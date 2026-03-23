@@ -13,10 +13,11 @@ export default function ResetPasswordPage() {
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    const getSession = async () => {
+    const handleSession = async () => {
       console.log("Full URL:", window.location.href);
       console.log("Hash:", window.location.hash);
 
+      // Supabase tự đọc access_token từ hash
       const { data, error } = await supabase.auth.getSession();
 
       console.log("Session:", data);
@@ -27,7 +28,7 @@ export default function ResetPasswordPage() {
       }
     };
 
-    getSession();
+    handleSession();
   }, []);
 
   const updatePassword = async () => {
@@ -39,10 +40,11 @@ export default function ResetPasswordPage() {
     else alert("Password updated");
   };
 
-  if (!sessionReady) return <div>Verifying...</div>;
+  if (!sessionReady) return <div>Verifying recovery link...</div>;
 
   return (
     <div>
+      <h1>Reset Password</h1>
       <input
         type="password"
         placeholder="New password"
