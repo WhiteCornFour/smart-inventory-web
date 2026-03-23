@@ -17,27 +17,64 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const handleRecovery = async () => {
+      console.log("===== RESET PASSWORD FLOW START =====");
+
+      // Log full URL
+      console.log("Current URL:", window.location.href);
+
       const params = new URLSearchParams(window.location.search);
 
       const token = params.get("token");
       const type = params.get("type");
 
-      if (!token || type !== "recovery") {
+      console.log("Token from URL:", token);
+      console.log("Type from URL:", type);
+
+      if (!token) {
+        console.log("ERROR: Token not found in URL");
         setMessage("Recovery link invalid or expired");
         return;
       }
 
-      // Verify recovery token → create session
+      if (type !== "recovery") {
+        console.log("ERROR: Type is not recovery");
+        setMessage("Invalid recovery type");
+        return;
+      }
+
+      console.log("Calling verifyOtp...");
+
       const { data, error } = await supabase.auth.verifyOtp({
         token_hash: token,
         type: "recovery",
       });
 
+      console.log("verifyOtp result:", data);
+      console.log("verifyOtp error:", error);
+
       if (error) {
+        console.log("ERROR verifyOtp:", error.message);
         setMessage(error.message);
-      } else {
-        setSessionReady(true);
+        return;
       }
+
+      console.log("Getting session after verify...");
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      console.log("Session after verify:", session);
+
+      if (!session) {
+        console.log("ERROR: Session is null after verify");
+        setMessage("Session not created");
+        return;
+      }
+
+      console.log("Session OK → Ready to reset password");
+
+      setSessionReady(true);
     };
 
     handleRecovery();
@@ -46,20 +83,33 @@ export default function ResetPasswordPage() {
   const updatePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    console.log("===== UPDATE PASSWORD =====");
+
+    console.log("Password:", password);
+    console.log("Confirm Password:", confirmPassword);
+
     if (password !== confirmPassword) {
+      console.log("ERROR: Passwords do not match");
       setMessage("Passwords do not match");
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.auth.updateUser({
+    console.log("Calling updateUser...");
+
+    const { data, error } = await supabase.auth.updateUser({
       password: password,
     });
 
+    console.log("updateUser result:", data);
+    console.log("updateUser error:", error);
+
     if (error) {
+      console.log("ERROR updateUser:", error.message);
       setMessage(error.message);
     } else {
+      console.log("Password updated successfully");
       setMessage("Password updated successfully");
 
       setTimeout(() => {
