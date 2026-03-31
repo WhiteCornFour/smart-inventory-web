@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export default function ResetPasswordPage() {
@@ -17,14 +17,24 @@ export default function ResetPasswordPage() {
       console.log("Full URL:", window.location.href);
       console.log("Hash:", window.location.hash);
 
-      // Supabase tự đọc access_token từ hash
-      const { data, error } = await supabase.auth.getSession();
+      // Lấy token từ URL hash
+      const hash = window.location.hash;
+      const params = new URLSearchParams(hash.replace("#", ""));
 
-      console.log("Session:", data);
-      console.log("Error:", error);
+      const access_token = params.get("access_token");
+      const refresh_token = params.get("refresh_token");
 
-      if (data.session) {
-        setSessionReady(true);
+      if (access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({
+          access_token,
+          refresh_token,
+        });
+
+        if (error) {
+          console.error("Set session error:", error);
+        } else {
+          setSessionReady(true);
+        }
       }
     };
 
