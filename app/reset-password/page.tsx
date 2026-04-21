@@ -16,7 +16,49 @@ export default function ResetPasswordPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    // Optionally listen to events, but we don't block rendering
+    const handleSession = async () => {
+      // 1. Check for PKCE pattern (?code=...)
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      
+      if (code) {
+        // Exchange the code for a session
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setErrorMessage("Invalid or expired reset link.");
+          setStatus("error");
+          return;
+        }
+        // Clear code from URL to prevent re-exchange on refresh
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+
+      // 2. Fallback check for Implicit pattern (#access_token=...)
+      const hash = window.location.hash;
+      if (hash && hash.includes("access_token")) {
+        const hashParams = new URLSearchParams(hash.replace("#", ""));
+        const access_token = hashParams.get("access_token");
+        const refresh_token = hashParams.get("refresh_token");
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (error) {
+             setErrorMessage("Expired reset link.");
+             setStatus("error");
+          } else {
+             // Clear hash from URL for tidiness
+             window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }
+      }
+    };
+
+    handleSession();
+
+    // Optionally listen to events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         // Recovery access granted
