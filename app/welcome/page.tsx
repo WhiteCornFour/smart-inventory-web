@@ -6,18 +6,10 @@ export default function WelcomePage() {
   const [status, setStatus] = useState<"loading" | "success">("loading");
 
   useEffect(() => {
-    const search = window.location.search;
-    const hash = window.location.hash;
-
+    // Simulate a brief loading state purely for aesthetic UX, then show success
     const initialTimer = setTimeout(() => {
       setStatus("success");
-
-      const redirectTimer = setTimeout(() => {
-        window.location.href = `io.supabase.flutter://login-callback${search}${hash}`;
-      }, 2000);
-
-      return () => clearTimeout(redirectTimer);
-    }, 1000);
+    }, 1500);
 
     return () => clearTimeout(initialTimer);
   }, []);
@@ -26,7 +18,7 @@ export default function WelcomePage() {
     <div className="w-full max-w-sm sm:max-w-md p-8 sm:p-10 rounded-[2rem] bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] flex flex-col items-center justify-center gap-6 text-center transition-all duration-700 ease-in-out transform hover:scale-[1.02]">
       <div className="relative flex items-center justify-center h-24 w-24 mb-2">
         <div className={`absolute inset-0 bg-[#F16A2D] blur-xl rounded-full transition-opacity duration-700 ${status === "loading" ? "opacity-30 animate-pulse" : "opacity-0"}`} />
-
+        
         {status === "loading" ? (
           <svg className="w-16 h-16 text-[#F16A2D] animate-spin relative z-10" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -43,12 +35,12 @@ export default function WelcomePage() {
 
       <div className="space-y-3">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-          {status === "loading" ? "Đang xác thực..." : "Xác thực thành công"}
+          {status === "loading" ? "Verifying..." : "Verification Successful"}
         </h1>
         <p className="text-sm sm:text-base text-gray-400 font-medium">
-          {status === "loading"
-            ? "Vui lòng đợi giây lát."
-            : "Đang tự động mở ứng dụng..."}
+          {status === "loading" 
+            ? "Please wait a moment." 
+            : "You can now close this browser, return to the app, and log in."}
         </p>
       </div>
     </div>
