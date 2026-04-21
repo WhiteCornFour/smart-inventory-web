@@ -22,21 +22,28 @@ export default function ResetPasswordPage() {
       const code = url.searchParams.get("code");
       
       if (code) {
+        // SYNCHRONOUSLY remove the code from the URL so React Strict Mode or double renders don't reuse it.
+        url.searchParams.delete("code");
+        window.history.replaceState({}, document.title, url.toString());
+
         // Exchange the code for a session
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setErrorMessage("Invalid or expired reset link.");
+          // If the code was already consumed (e.g., by email prefetching or Strict Mode race condition)
+          // we might just try to let them update if there's already a session.
+          // But to be safe, we show the error if we are strictly relying on this.
+          setErrorMessage("Invalid or expired reset link. Please request a new one.");
           setStatus("error");
-          return;
         }
-        // Clear code from URL to prevent re-exchange on refresh
-        window.history.replaceState({}, document.title, window.location.pathname);
         return;
       }
 
       // 2. Fallback check for Implicit pattern (#access_token=...)
       const hash = window.location.hash;
       if (hash && hash.includes("access_token")) {
+        // SYNCHRONOUSLY remove the hash
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+
         const hashParams = new URLSearchParams(hash.replace("#", ""));
         const access_token = hashParams.get("access_token");
         const refresh_token = hashParams.get("refresh_token");
@@ -46,11 +53,8 @@ export default function ResetPasswordPage() {
             refresh_token,
           });
           if (error) {
-             setErrorMessage("Expired reset link.");
+             setErrorMessage("Expired reset link. Please request a new one.");
              setStatus("error");
-          } else {
-             // Clear hash from URL for tidiness
-             window.history.replaceState({}, document.title, window.location.pathname);
           }
         }
       }
