@@ -1,103 +1,56 @@
 "use client";
 
-export default function HomePage() {
+import { useEffect, useState } from "react";
+
+export default function WelcomePage() {
+  const [status, setStatus] = useState<"loading" | "success">("loading");
+
+  useEffect(() => {
+    const search = window.location.search;
+    const hash = window.location.hash;
+
+    const initialTimer = setTimeout(() => {
+      setStatus("success");
+
+      const redirectTimer = setTimeout(() => {
+        window.location.href = `io.supabase.flutter://login-callback${search}${hash}`;
+      }, 2000);
+
+      return () => clearTimeout(redirectTimer);
+    }, 1000);
+
+    return () => clearTimeout(initialTimer);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 flex flex-col font-sans selection:bg-[#F16A2D]/20">
-      {/* Header tối giản */}
-      <nav className="px-6 py-5 flex justify-center md:justify-between items-center max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-2.5">
-          <div className="w-11 h-11 bg-[#F16A2D] rounded-2xl flex items-center justify-center shadow-lg shadow-[#F16A2D]/20">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M5 13l4 4L19 7"
-              />
+    <div className="w-full max-w-sm sm:max-w-md p-8 sm:p-10 rounded-[2rem] bg-white/5 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] flex flex-col items-center justify-center gap-6 text-center transition-all duration-700 ease-in-out transform hover:scale-[1.02]">
+      <div className="relative flex items-center justify-center h-24 w-24 mb-2">
+        <div className={`absolute inset-0 bg-[#F16A2D] blur-xl rounded-full transition-opacity duration-700 ${status === "loading" ? "opacity-30 animate-pulse" : "opacity-0"}`} />
+
+        {status === "loading" ? (
+          <svg className="w-16 h-16 text-[#F16A2D] animate-spin relative z-10" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        ) : (
+          <div className="relative z-10 flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-tr from-[#F16A2D] to-[#FCA5A5] text-white shadow-xl shadow-[#F16A2D]/30 animate-[bounce_0.5s_ease-out]">
+            <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <span className="text-2xl font-black tracking-tighter">
-            Smart<span className="text-[#F16A2D]">Inventory</span>
-          </span>
-        </div>
-      </nav>
+        )}
+      </div>
 
-      <main className="flex-grow flex flex-col items-center justify-center px-6 text-center -mt-10">
-        {/* Icon thành công phỏng theo style Screen 01 */}
-        <div className="mb-8 relative">
-          <div className="w-24 h-24 bg-[#FFE8DC] rounded-[32px] flex items-center justify-center mx-auto rotate-3">
-            <div className="w-20 h-20 bg-white rounded-[24px] shadow-sm flex items-center justify-center -rotate-3 border border-[#FFE8DC]">
-              <svg
-                className="w-10 h-10 text-[#F16A2D]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-          </div>
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#F16A2D] rounded-full border-4 border-white shadow-md animate-bounce"></div>
-        </div>
-
-        {/* Khối nội dung thành công */}
-        <div className="max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <h1 className="text-4xl md:text-5xl font-black text-gray-950 tracking-tighter mb-4">
-            Xác thực thành công!
-          </h1>
-          <p className="text-lg text-gray-600 mb-10 leading-relaxed">
-            Chào mừng bạn, tài khoản của bạn đã sẵn sàng để quản lý kho hàng.
-          </p>
-
-          <div className="space-y-4 w-full">
-            <button
-              onClick={() => (window.location.href = "io.supabase.flutter://")}
-              className="w-full group bg-[#F16A2D] text-white py-5 rounded-[24px] font-extrabold text-xl shadow-xl shadow-[#F16A2D]/20 hover:bg-[#E05B1C] transition-all active:scale-[0.97] flex items-center justify-center gap-3"
-            >
-              Mở Ứng Dụng Ngay
-              <div className="p-1 rounded-full bg-white/20 group-hover:bg-white/30 transition">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
-                </svg>
-              </div>
-            </button>
-
-            <p className="text-sm text-gray-400 font-medium">
-              Bạn có thể đóng trình duyệt này sau khi vào App
-            </p>
-          </div>
-        </div>
-
-        {/* Trang trí họa tiết Vector mờ (Style của app) */}
-        <div className="fixed -bottom-20 -left-20 w-80 h-80 bg-[#F16A2D]/5 rounded-full blur-3xl -z-10"></div>
-        <div className="fixed -top-20 -right-20 w-80 h-80 bg-gray-100 rounded-full blur-3xl -z-10"></div>
-      </main>
-
-      <footer className="py-8 text-center">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-          Smart Inventory Ecosystem • 2026
+      <div className="space-y-3">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          {status === "loading" ? "Đang xác thực..." : "Xác thực thành công"}
+        </h1>
+        <p className="text-sm sm:text-base text-gray-400 font-medium">
+          {status === "loading"
+            ? "Vui lòng đợi giây lát."
+            : "Đang tự động mở ứng dụng..."}
         </p>
-      </footer>
+      </div>
     </div>
   );
 }
