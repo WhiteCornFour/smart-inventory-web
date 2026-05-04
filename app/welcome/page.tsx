@@ -20,9 +20,7 @@ export default function WelcomePage() {
   return (
     <div className="w-full flex-1 flex flex-col items-center justify-center p-4 selection:bg-[#F16A2D]/30">
       <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 border border-white/10">
-          <span className="text-sm font-black text-[#F16A2D]">S</span>
-        </div>
+        <img src="/favicon.ico" alt="Storix Logo" className="w-8 h-8 object-contain rounded-lg shadow-sm" />
         <span className="font-medium tracking-tight">Storix</span>
       </Link>
 

@@ -59,9 +59,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="w-full px-6 py-4 flex items-center justify-between border-b border-white/5 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-[#F16A2D] to-[#FF8A56] text-white shadow-lg shadow-[#F16A2D]/20">
-            <span className="text-xl font-black">S</span>
-          </div>
+          <img src="/favicon.ico" alt="Storix Logo" className="w-10 h-10 object-contain rounded-xl shadow-lg shadow-[#F16A2D]/20" />
           <span className="text-xl font-bold tracking-tight">Storix</span>
         </div>
         <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-300">
